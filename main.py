@@ -1,11 +1,14 @@
 import sys
+import time
 import random
 from pathlib import Path
 
 # Tamanho máximo da cache (em bytes)
 MAX_CACHE_SIZE = 2**30
 # Configuração de cache padrão <nsets>:<bsize>:<assoc>
-DEFAULT_CACHE_CONFIG = "64:32:1"
+DEFAULT_CACHE_CONFIG = "128:32:1"
+
+# -------------------------------- Verificador --------------------------------
 
 class Checker:
     @staticmethod
@@ -34,8 +37,10 @@ class Checker:
             not Checker.is_power_of_two(assoc)):
             raise ValueError("ERRO. Os tamanhos de cada campo da cache deve ser uma potência de 2.")
         if nsets * bsize * assoc > MAX_CACHE_SIZE:
-            raise ValueError(f"ERRO. O tamanho máximo de cada cache é de {MAX_CACHE_SIZE}B.")
+            raise ValueError(f"ERRO. O tamanho máximo de cada cache é de {MAX_CACHE_SIZE} B.")
         return [nsets, bsize, assoc]
+
+# -------------------------------- Instrução --------------------------------
 
 class Instruction:
     def __init__(self, line: str):
@@ -52,22 +57,45 @@ class Instruction:
         self.kind = kind
         self.address = address
 
+# -------------------------------- Cache --------------------------------
+
+class BlockSet:
+    def __init__(self, assoc: int):
+        self.assoc = assoc
+        self.blocks = []
+        self.index = dict()
+    def has(self, block: int) -> bool:
+        return block in self.index
+    def is_full(self) -> bool:
+        return len(self.blocks) == self.assoc
+    def insert(self, block: int) -> int:
+        self.index[block] = len(self.blocks)
+        self.blocks.append(block)
+    def remove(self) -> None:
+        i = random.randrange(len(self.blocks))
+        block = self.blocks[i]
+        last_block = self.blocks[-1]
+        self.blocks[i] = last_block
+        self.index[last_block] = i
+        self.blocks.pop()
+        del self.index[block]
+
 class CacheSet:
     def __init__(self, nsets: int, bsize: int, assoc: int):
         self.nsets = nsets
         self.bsize = bsize
         self.assoc = assoc
         self.total_size = nsets * bsize * assoc
-        self.content = [set() for _ in range(nsets)]
+        self.content = [BlockSet(assoc) for _ in range(nsets)]
     def insert(self, block: int) -> int:
         line = block % self.nsets
         cache = self.content[line]
-        if block in cache:
+        if cache.has(block):
             return 0
         else:
-            if len(cache) == self.assoc:
-                cache.remove(random.choice(tuple(cache)))
-            self.content[line].add(block)
+            if cache.is_full():
+                cache.remove()
+            cache.insert(block)
             return 1
 
 class Cache:
@@ -85,8 +113,11 @@ class Cache:
             block = address // self.dcache.bsize
             return self.dcache.insert(block)
 
+# -------------------------------- Programa --------------------------------
+
 class Program:
     def __init__(self):
+        self.START_TIME = time.perf_counter()
         print("Criando caches...")
         self.argv = sys.argv
         self.argc = len(self.argv)
@@ -105,11 +136,14 @@ class Program:
         print("Processando...")
         for instruction in self.instructions:
             self.misses += self.cache.insert(instruction.kind, instruction.address)
+        self.END_TIME = time.perf_counter()
         print(f"\nSimulação finalizada com sucesso!\n{'-' * 40}")
         print(f"Número de acessos: {Checker.format(self.acesses)}")
         print(f"Número de hits: {Checker.format(self.acesses - self.misses)}")
         print(f"Número de misses: {Checker.format(self.misses)}")
         print(f"Miss rate: {(self.misses / self.acesses * 100):.2f}%")
+        print('-' * 40)
+        print(f"Tempo de execução: {str(round(self.END_TIME - self.START_TIME, 2)).replace('.', ',')} segundos")
         print('-' * 40)
 
 program = Program()
