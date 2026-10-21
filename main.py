@@ -6,7 +6,7 @@ from pathlib import Path
 # Tamanho máximo da cache (em bytes)
 MAX_CACHE_SIZE = 2**30
 # Configuração de cache padrão <nsets>:<bsize>:<assoc>
-DEFAULT_CACHE_CONFIG = "128:32:1"
+DEFAULT_CACHE_CONFIG = "64:32:1"
 
 # -------------------------------- Verificador --------------------------------
 
@@ -131,17 +131,35 @@ class Program:
         file_content = self.file.read_text().strip().split('\n')
         self.instructions = [Instruction(line) for line in file_content]
         self.acesses = len(self.instructions)
-        self.misses = 0
+        self.instruction_acesses = 0
+        self.instruction_misses = 0
+        self.data_acesses = 0
+        self.data_misses = 0
     def run(self):
         print("Processando...")
         for instruction in self.instructions:
-            self.misses += self.cache.insert(instruction.kind, instruction.address)
+            if instruction.kind == 'I':
+                self.instruction_acesses += 1
+                self.instruction_misses += self.cache.insert(instruction.kind, instruction.address)
+            else:
+                self.data_acesses += 1
+                self.data_misses += self.cache.insert(instruction.kind, instruction.address)
         self.END_TIME = time.perf_counter()
-        print(f"\nSimulação finalizada com sucesso!\n{'-' * 40}")
-        print(f"Número de acessos: {Checker.format(self.acesses)}")
-        print(f"Número de hits: {Checker.format(self.acesses - self.misses)}")
-        print(f"Número de misses: {Checker.format(self.misses)}")
-        print(f"Miss rate: {(self.misses / self.acesses * 100):.2f}%")
+        print("\nSimulação finalizada com sucesso!")
+        print('-' * 40)
+        print(f"Número total de acessos: {Checker.format(self.acesses)}")
+        print('-' * 40)
+        print('CACHE DE INSTRUÇÕES:')
+        print(f"Acessos: {Checker.format(self.instruction_acesses)}")
+        print(f"Hits: {Checker.format(self.instruction_acesses - self.instruction_misses)}")
+        print(f"Misses: {Checker.format(self.instruction_misses)}")
+        print(f"Miss rate: {(self.instruction_misses / self.instruction_acesses * 100):.2f}%")
+        print('-' * 40)
+        print('CACHE DE DADOS:')
+        print(f"Acessos: {Checker.format(self.data_acesses)}")
+        print(f"Hits: {Checker.format(self.data_acesses - self.data_misses)}")
+        print(f"Misses: {Checker.format(self.data_misses)}")
+        print(f"Miss rate: {(self.data_misses / self.data_acesses * 100):.2f}%")
         print('-' * 40)
         print(f"Tempo de execução: {str(round(self.END_TIME - self.START_TIME, 2)).replace('.', ',')} segundos")
         print('-' * 40)
