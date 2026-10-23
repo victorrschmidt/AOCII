@@ -21,11 +21,14 @@ class BlockSet:
         del self.index[block]
     def has(self, block: int) -> bool:
         return block in self.index
-    def insert(self, block: int) -> None:
+    def insert(self, block: int) -> bool:
+        miss_type = False  # Compulsório
         if self.__is_full():
             self.__remove()
+            miss_type = True  # Conflito
         self.index[block] = len(self.blocks)
         self.blocks.append(block)
+        return miss_type
 
 class Cache:
     def __init__(self, cache_config: str=None):
@@ -38,7 +41,10 @@ class Cache:
         self.assoc = assoc
         self.content = [BlockSet(assoc) for _ in range(nsets)]
         self.acesses = 0
+        self.hits = 0
         self.misses = 0
+        self.comp_misses = 0
+        self.conf_misses = 0
     def __has(self, block_set: BlockSet, block: int) -> bool:
         return block_set.has(block)
     def __insert(self, block_set: BlockSet, block: int) -> None:
@@ -48,16 +54,24 @@ class Cache:
         line = block % self.nsets
         cache = self.content[line]
         if self.__has(cache, block):
+            self.hits += 1
             return True
         else:
-            self.__insert(cache, block)
+            miss_type = self.__insert(cache, block)
             self.misses += 1
+            if miss_type:
+                self.conf_misses += 1
+            else:
+                self.comp_misses += 1
             return False
     def debug(self, name: str) -> None:
         print(f"{name}:")
         print(f"Acessos: {Checker.format_number(self.acesses)}")
         if self.acesses > 0:
-            print(f"Hits: {Checker.format_number(self.acesses - self.misses)}")
-            print(f"Misses: {Checker.format_number(self.misses)}")
+            print(f"Hits: {Checker.format_number(self.hits)}")
+            print(f"Misses totais: {Checker.format_number(self.misses)}")
+            print(f"Misses compulsórios: {Checker.format_number(self.comp_misses)}")
+            print(f"Misses de conflito/capacidade: {Checker.format_number(self.conf_misses)}")
+            print(f"Hit rate: {(self.hits / self.acesses * 100):.2f}%")
             print(f"Miss rate: {(self.misses / self.acesses * 100):.2f}%")
         print('-' * 40)
