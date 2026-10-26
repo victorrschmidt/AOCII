@@ -9,25 +9,28 @@ class BlockSet:
         self.assoc = assoc
         self.blocks = list()
         self.index = dict()
-    def __is_full(self) -> bool:
-        return len(self.blocks) == self.assoc
-    def __remove(self) -> None:
-        i = random.randrange(len(self.blocks))
+        self.is_full = False
+        self.block_history = set()
+    def __remove_random_block(self) -> None:
+        i = random.randrange(self.assoc)
         block = self.blocks[i]
         last_block = self.blocks[-1]
         self.blocks[i] = last_block
         self.index[last_block] = i
         self.blocks.pop()
         del self.index[block]
-    def has(self, block: int) -> bool:
+    def has_block(self, block: int) -> bool:
         return block in self.index
-    def insert(self, block: int) -> bool:
-        miss_type = False  # Compulsório
-        if self.__is_full():
-            self.__remove()
-            miss_type = True  # Conflito
+    def insert_block(self, block: int) -> bool:
+        # True <=> Miss de capacidade/conflito
+        # False <=> Miss compulsório
+        miss_type = block in self.block_history
+        if self.is_full:
+            self.__remove_random_block()
         self.index[block] = len(self.blocks)
         self.blocks.append(block)
+        self.is_full = len(self.blocks) == self.assoc
+        self.block_history.add(block)
         return miss_type
 
 class Cache:
@@ -46,9 +49,9 @@ class Cache:
         self.comp_misses = 0
         self.conf_misses = 0
     def __has(self, block_set: BlockSet, block: int) -> bool:
-        return block_set.has(block)
-    def __insert(self, block_set: BlockSet, block: int) -> None:
-        block_set.insert(block)
+        return block_set.has_block(block)
+    def __insert(self, block_set: BlockSet, block: int) -> bool:
+        return block_set.insert_block(block)
     def has_block(self, block: int) -> bool:
         self.acesses += 1
         line = block % self.nsets
@@ -56,19 +59,18 @@ class Cache:
         if self.__has(cache, block):
             self.hits += 1
             return True
+        self.misses += 1
+        miss_type = self.__insert(cache, block)
+        if miss_type:
+            self.conf_misses += 1
         else:
-            miss_type = self.__insert(cache, block)
-            self.misses += 1
-            if miss_type:
-                self.conf_misses += 1
-            else:
-                self.comp_misses += 1
-            return False
+            self.comp_misses += 1
+        return False
     def debug(self, name: str) -> None:
         print(f"{name}:")
         print(f"Acessos: {Checker.format_number(self.acesses)}")
         if self.acesses > 0:
-            print(f"Hits: {Checker.format_number(self.hits)}")
+            print(f"Hits totais: {Checker.format_number(self.hits)}")
             print(f"Misses totais: {Checker.format_number(self.misses)}")
             print(f"Misses compulsórios: {Checker.format_number(self.comp_misses)}")
             print(f"Misses de conflito/capacidade: {Checker.format_number(self.conf_misses)}")

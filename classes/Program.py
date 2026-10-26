@@ -8,7 +8,6 @@ from pathlib import Path
 class Program:
     def __init__(self):
         self.START_TIME = time.perf_counter()
-        print("Criando caches...")
         self.argv = sys.argv
         self.argc = len(self.argv)
         Checker.valid_argc(self.argc)
@@ -24,7 +23,9 @@ class Program:
             if self.argc == 5:
                 self.l2 = Cache(self.argv[3])
                 self.has_l2 = True
+        print("Criando caches...")
         file_content = self.file.read_text().strip().split('\n')
+        print("Lendo instruções...")
         self.instructions = [Instruction(line) for line in file_content]
         self.acesses = len(self.instructions)
     def run(self):

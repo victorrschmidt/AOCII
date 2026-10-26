@@ -13,22 +13,26 @@ class Checker:
     @staticmethod
     def valid_argc(argc: int) -> None:
         if argc != 2 and argc != 4 and argc != 5:
-            raise ValueError("ERRO. Número de argumentos inválido.")
+            print("ERRO. Número de argumentos inválido.")
+            exit(1)
     @staticmethod
     def valid_file(file: Path, filename: str) -> None:
         if not file.exists():
-            raise FileNotFoundError(f"ERRO. Arquivo '{filename}' não encontrado.")
+            print(f"ERRO. Arquivo '{filename}' não encontrado.")
+            exit(1)
     @staticmethod
     def valid_cache(cache_config: str) -> list[int]:
         try:
             nsets, bsize, assoc = [int(x) for x in cache_config.split(':')]
         except:
             print("ERRO. Cache inválida.")
-            raise
+            exit(1)
         if (not Checker.is_power_of_two(nsets) or
             not Checker.is_power_of_two(bsize) or
             not Checker.is_power_of_two(assoc)):
-            raise ValueError("ERRO. Os tamanhos de cada campo da cache deve ser uma potência de 2.")
+            print("ERRO. Os tamanhos de cada campo da cache deve ser uma potência de 2.")
+            exit(1)
         if nsets * bsize * assoc > MAX_CACHE_SIZE:
-            raise ValueError(f"ERRO. O tamanho máximo de cada cache é de {MAX_CACHE_SIZE} B.")
+            print(f"ERRO. O tamanho máximo de cada cache é de {MAX_CACHE_SIZE} B.")
+            exit(1)
         return [nsets, bsize, assoc]
